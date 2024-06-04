@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { Sauce } = require("../models");
 
-// GET /sauce
+// GET /api/sauces
 router.get("/", async (req, res, next) => {
 	try {
 		const sauces = await Sauce.findAll();
