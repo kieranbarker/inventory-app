@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from "react";
+import CreateItemForm from "./CreateItemForm";
+import Inventory from "./Inventory";
+import UpdateItemForm from "./UpdateItemForm";
 
 // import and prepend the api url to any fetch calls
 import apiURL from "../api";
@@ -6,34 +9,60 @@ import apiURL from "../api";
 export const App = () => {
 	const [items, setItems] = useState([]);
 	const [currentItem, setCurrentItem] = useState(null);
-	const [isFormShowing, setIsFormShowing] = useState(false);
 
-	const [name, setName] = useState("");
-	const [description, setDescription] = useState("");
-	const [price, setPrice] = useState(0);
-	const [category, setCategory] = useState("");
-	const [image, setImage] = useState("");
+	const [isCreateFormShowing, setIsCreateFormShowing] = useState(false);
+	const [isUpdateFormShowing, setIsUpdateFormShowing] = useState(false);
 
-	async function addItem(event) {
-		event.preventDefault();
-
+	async function addItem(data) {
+		// Send the POST request to the back end
 		const response = await fetch(`${apiURL}/items`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify({ name, description, price, category, image }),
+			body: JSON.stringify(data),
 		});
 
+		// If the POST request was successful...
 		if (response.ok) {
+			// Add the new item to state
 			const newItem = await response.json();
 			setItems([...items, newItem]);
-			setName("");
-			setDescription("");
-			setPrice(0);
-			setCategory("");
-			setImage("");
-			setIsFormShowing(false);
+
+			// Hide the form
+			setIsCreateFormShowing(false);
+		}
+	}
+
+	async function updateItem(id, data) {
+		// Send the PATCH request to the back end
+		const response = await fetch(`${apiURL}/items/${id}`, {
+			method: "PATCH",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(data),
+		});
+
+		// If the PATCH request was successful...
+		if (response.ok) {
+			const updatedItem = await response.json();
+
+			const index = items.findIndex(item => {
+				if (item.id === id) {
+					return true;
+				} else {
+					return false;
+				}
+			});
+
+			// Replace the old item with the updated item
+			const updatedItems = items.toSpliced(index, 1, updatedItem);
+			setItems(updatedItems);
+			setCurrentItem(updatedItem);
+
+			// Hide the form
+			setIsUpdateFormShowing(false);
 		}
 	}
 
@@ -89,80 +118,11 @@ export const App = () => {
 		return (
 			<main>
 				<h1>Inventory App</h1>
-				<button onClick={() => setIsFormShowing(!isFormShowing)}>
-					{isFormShowing ? "Hide Form" : "Show Form"}
+				<button onClick={() => setIsCreateFormShowing(!isCreateFormShowing)}>
+					{isCreateFormShowing ? "Hide Form" : "Show Form"}
 				</button>
-				{isFormShowing && (
-					<form onSubmit={addItem}>
-						<p className="huge">
-							<label htmlFor="name">Name</label>
-							<br />
-							<input
-								type="text"
-								name="name"
-								id="name"
-								value={name}
-								onChange={event => setName(event.target.value)}
-							/>
-						</p>
-						<p>
-							<label htmlFor="description">Description</label>
-							<br />
-							<textarea
-								name="description"
-								id="description"
-								value={description}
-								onChange={event => setDescription(event.target.value)}
-							/>
-						</p>
-						<p>
-							<label htmlFor="price">Price</label>
-							<br />
-							<input
-								type="number"
-								name="price"
-								id="price"
-								value={price}
-								onChange={event => setPrice(event.target.value)}
-							/>
-						</p>
-						<p>
-							<label htmlFor="category">Category</label>
-							<br />
-							<input
-								type="text"
-								name="category"
-								id="category"
-								value={category}
-								onChange={event => setCategory(event.target.value)}
-							/>
-						</p>
-						<p>
-							<label htmlFor="image">Image</label>
-							<br />
-							<input
-								type="url"
-								name="image"
-								id="image"
-								value={image}
-								onChange={event => setImage(event.target.value)}
-							/>
-						</p>
-						<p>
-							<button type="submit">Add Item</button>
-						</p>
-					</form>
-				)}
-				<ul className="inventory">
-					{items.map(item => (
-						<li key={item.id}>
-							<h2>
-								<button onClick={() => setCurrentItem(item)}>{item.name}</button>
-							</h2>
-							<img src={item.image} alt="" />
-						</li>
-					))}
-				</ul>
+				{isCreateFormShowing && <CreateItemForm addItem={addItem} />}
+				<Inventory items={items} setCurrentItem={setCurrentItem} />
 			</main>
 		);
 	}
@@ -170,6 +130,10 @@ export const App = () => {
 	// Otherwise, show the single item view
 	return (
 		<main>
+			<button onClick={() => setIsUpdateFormShowing(!isUpdateFormShowing)}>
+				{isUpdateFormShowing ? "Hide Form" : "Show Form"}
+			</button>
+			{isUpdateFormShowing && <UpdateItemForm {...currentItem} updateItem={updateItem} />}
 			<h1>{currentItem.name}</h1>
 			<p>£{currentItem.price.toFixed(2)}</p>
 			<p>{currentItem.description}</p>
